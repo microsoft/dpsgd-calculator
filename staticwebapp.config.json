@@ -1,0 +1,13 @@
+{
+  "trailingSlash": "auto",
+  "routes": [
+    {
+      "route": "/*",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/login",
+      "rewrite": "/.auth/login/aad"
+    }
+  ]
+}
