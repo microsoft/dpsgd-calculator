@@ -1,5 +1,4 @@
 import numpy as np
-# from scipy import stats
 import fourier_accountant
 from scipy.special import erf
 from shapely.geometry import Polygon
