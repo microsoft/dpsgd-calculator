@@ -22,7 +22,7 @@ from opacus import PrivacyEngine
 from tqdm import tqdm
 
 from utils import *
-from opacus_bayessgd import AIAnalysis, MIAAnalysis, UserMIAAnalysis
+from bayessgd import AIAnalysis, MIAAnalysis, UserMIAAnalysis
 
 
 def train(args, model, device, train_loader, optimizer, privacy_engine, epoch, test_loader):
