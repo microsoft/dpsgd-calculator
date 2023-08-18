@@ -242,9 +242,6 @@ def main():
         help="Logging file (format: jsonl)",
     )
     args = parser.parse_args()
-    #import random
-    #args.device = random.choice(["cuda:0", "cuda:1", "cuda:2", "cuda:3"])
-
     device = torch.device(args.device)
 
     if args.dataset == "mnist":
