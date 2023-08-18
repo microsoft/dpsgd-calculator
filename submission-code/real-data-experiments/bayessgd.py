@@ -9,6 +9,8 @@ from scipy.special import erf
 from scipy.stats import binom
 
 def point_set_diameter(S, norm=torch.linalg.norm):
+    """Returns the max distance (`norm`) between pairwise points in `S`.
+    """
     diameter = torch.as_tensor(0.)
     for i in range(len(S)):
         for j in range(i+1, len(S)):
@@ -17,6 +19,8 @@ def point_set_diameter(S, norm=torch.linalg.norm):
     return diameter
 
 def approximate_point_set_diameter(S, norm=torch.linalg.norm):
+    """Returns an upper bound on the max distance (`norm`) between pairwise points in `S`.
+    """
     centroid = torch.mean(S, axis=0)
     diameter = torch.as_tensor(0.)
     for x in S:
