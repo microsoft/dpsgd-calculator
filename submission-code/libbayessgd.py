@@ -1,11 +1,12 @@
 import numpy as np
-from scipy import stats
-from scipy.special import erf
+# from scipy import stats
 import fourier_accountant
+from scipy.special import erf
+from shapely.geometry import Polygon
 
 
 def compute_beta_mia(p, sigma, T, relation="s"):
-    """Corollary 8: compute the Bayes security for MIA, w.r.t. a given relation ("s" or "r").
+    """Corollary 7: compute the Bayes security for MIA, w.r.t. a given relation ("s" or "r").
 
     Args:
         p (float): sample rate
@@ -30,10 +31,6 @@ def tv_error_term(p, sigma, T):
         """
     return np.sqrt(T*(p - p**2))/(2*sigma)
 
-#########################################################################
-# Accountant methods.
-#########################################################################
-
 def compute_beta_pld(p, sigma, T, relation="s"):
     """Computes Bayes security for MIA via https://github.com/DPBayes/PLD-Accountant.
 
@@ -51,39 +48,31 @@ def compute_beta_pld(p, sigma, T, relation="s"):
         raise ValueError("relation must be either 's' or 'r'")
     return 1-delta
 
-def compute_beta_prv(p, sigma, C, T, mode="estimate", relation="s"):
-    """Computes Bayes security for MIA via the PRV accountant.
-
-    NOTE: this may be unreliable for the substitution relation.
-
-    Args:
-        p (float): sample rate
-        sigma (float): noise multiplier
-        C (float): clipping bound
-        T (float): number of steps
-        mode (str, optional): "lower", "upper", or "estimate". Defaults to "estimate".
-        relation (str, optional): "s" for substitution relation, "r" for add-remove relation. Defaults to "s".
-    """
-    T = int(T)
-    if relation == "s":
-        C *= 2
-    acc = PRVAccountant(prvs=PoissonSubsampledGaussianMechanism(
-                            noise_multiplier=sigma/C,
-                            sampling_probability=p),
-                        max_self_compositions=T,
-                        eps_error=10**-4,
-                        delta_error=10**-4,
-        )
-
-    # Note: we use the upper bound on delta.
-    delta_lower, delta_est, delta_upper = acc.compute_delta(num_self_compositions=T, epsilon=0)
-    if mode == "lower":
-        delta = delta_lower
-    elif mode == "upper":
-        delta = delta_upper
-    elif mode == "estimate":
-        delta = delta_est
+#############################
+# TPR-FPR curves from f-DP. #
+#############################
+def intersect_polygons(polygons):
+    if len(polygons) == 1:
+        return polygons[0]
+    elif len(polygons) == 2:
+        return polygons[0].intersection(polygons[1])
     else:
-        raise NotImplementedError
+        mid = len(polygons) // 2
+        left = intersect_polygons(polygons[:mid])
+        right = intersect_polygons(polygons[mid:])
+        return left.intersection(right)
 
-    return 1-delta
+def convert_eps_deltas_to_fpr_fnr(epsilons, deltas):
+    polygons = [
+        Polygon([(0, 1), (0, 1-d), ((1-d)/(1+np.exp(e)), (1-d)/(1+np.exp(e))), (1-d, 0), (1, 0)])
+        for e, d in zip(epsilons, deltas)
+    ]
+    intersection = intersect_polygons(polygons)
+    return np.array(intersection.exterior.coords.xy[0]), np.array(intersection.exterior.coords.xy[1])
+
+def pld_tpr_fpr(N, L, sigma, T, deltas=np.logspace(-6, 0, 20, endpoint=False)):
+    """Compute TPR and FPR curves using PLD."""
+    epsilons = [fourier_accountant.get_epsilon_S(target_delta=delta, sigma=sigma, q=L/N, ncomp=T) for delta in deltas]
+    fpr, fnr = convert_eps_deltas_to_fpr_fnr(epsilons, deltas)
+
+    return fpr, 1-fnr
