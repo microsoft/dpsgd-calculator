@@ -1,0 +1,349 @@
+<!-- Copyright (c) Microsoft Corporation.
+     Licensed under the MIT License. -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>DP-SGD Calculator</title>
+
+  <style>
+    html,
+    body {
+      color: #24292f;
+      background-color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      font-size: 16px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      max-width: 1012px;
+    margin-right: auto;
+    margin-left: auto;
+    }
+
+    a {
+      color: #0366d6;
+      text-decoration: none;
+      background-color: transparent;
+    }
+
+    code {
+      padding: 0.2em 0.4em;
+      margin: 0;
+      font-size: 85%;
+      background-color: rgba(27, 31, 35, 0.05);
+      border-radius: 3px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    }
+
+    .subsection {
+      border-color: #616161 !important;
+      padding-bottom: 16px !important;
+      border-bottom: 6px solid #ccc !important;
+      font-size: 24px !important;
+      text-align: center !important;
+      line-height: 1.5;
+      box-sizing: inherit;
+      font-family: "Lato", sans-serif;
+    }
+  </style>
+  <link rel="stylesheet" type="text/css" href="https://jsxgraph.org/distrib/jsxgraph.css">
+  <script type="text/javascript" src="https://jsxgraph.org/distrib/jsxgraphcore.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.7.0/math.js" type="text/javascript">
+  </script>
+  <script src="plots.js" type="text/javascript">
+  </script>
+</head>
+
+<body>
+
+
+  <h1>DP-SGD Calculator</h1>
+
+
+  Differentially-Private Stochastic Gradient Descent (DP-SGD) is an algorithm used for training neural networks in a
+  privacy-preserving manner.
+  It was proposed by <a href="https://arxiv.org/abs/1607.00133">Abadi et al.</a> in 2016, and it has been implemented in
+  several popular libraries, such as <a href="https://github.com/pytorch/opacus"><code>Opacus</code></a>, based on
+  <code>PyTorch</code>.
+
+  <p>DP-SGD adds noise to the gradients during training to
+    preserve the privacy of individual training data records.
+    More noise implies better privacy, but this comes with a utility cost: the model will be less accurate.
+    The privacy is typically evaluated according to
+    <a href="https://programming-dp.com/ch6.html">(&epsilon;,&delta;)-DP</a> values; roughly speaking, they
+    bound the amount of information leakage (&epsilon;), and the probability with which this could be violated
+    (&delta;).
+    These values do not assume any specific threat (i.e. the attacker's objective).
+  </p>
+
+  <p>
+    The interactive tool below gives guidance on how to select the DP-SGD parameters (e.g., amount of noise) to achieve a certain level of resilience against a specific threat: <em>membership inference</em>.
+    It has been shown that, if a system is resilient against membership inference, it is also resilient
+    against all other privacy attacks targeting individual records.
+    This tool is based on recent research by <a href="https://github.com/microsoft/dpsgd-calculator/blob/main/Closed-Form%20Bounds%20for%20DP-SGD%20against%20Record-level%20Inference.pdf">G. Cherubin, B. Köpf, A. Paverd, S. Tople, L. Wutschitz, and S. Zanella-Béguelin</a>, which shows that the level of privacy achieved by training with DP-SGD can be approximated via a closed-form expression.
+  </p>
+
+  <div style="text-align: center; margin: 50px;"><span class="subsection">Interactive Privacy Calculator for Membership Inference</span></div>
+
+  <p>The tool below calculates the resilience of a model against membership attacks in terms of <em>Bayes security</em>.
+    This metric indicates how much information an attacker can gain by using the model, compared to an attacker who has no access to the model and relies only on their prior knowledge.
+    It takes values between <code>[0,1]</code>, where <code>1</code> (perfect security) means that the model does not provide any additional information to the attacker.
+    This metric can thus be seen as describing the risk of releasing a model, with respect to the chosen threat.
+  </p>
+
+  <p>This tool is offered as a research prototype, and it should be used only as a guidance.</p>
+
+  <!-- Bayes security plot -->
+  <div id="bayesSecurityPlot" class="jxgbox" style="width: 600px; height: 400px; margin: 0 auto;"></div>
+  <div>
+    <p>
+      <label for="N">Number of data records: </label>
+      <input type="range" id="N" style="border: 0; color: #f6931f; font-weight: bold" min="1000" max="10000000"
+        value="1000000" /><label id="text_N"> 1000000</label>
+      <br />
+      <label for="L">Batch size:</label>
+      <input type="range" id="L" style="border: 0; color: #f6931f; font-weight: bold" min="0" max="10"
+        value="7" step="1"/><label id="text_L"> 128</label>
+      <br />
+      <label for="sigma">Noise parameter (sigma):</label>
+      <input type="range" id="sigma" style="border: 0; color: #f6931f; font-weight: bold" min="10" max="500"
+        value="25" /><label id="text_sigma"> 2.5</label>
+    </p>
+  </div>
+
+  <p>
+  The colored bands in the above calculator provide an example of how the results could be interpreted for a typical scenario.
+  In this example, the bands are defined as follows:
+  <ul>
+    <li><b><label style="color:green">Green</label> (Bayes security ≥ 0.98)</b>: in typical applications, this indicates reasonably strong resilience against membership inference attacks. An <em>optimal</em> attacker that wants to limit their false positive rate (FPR) to 10% can achieve a true positive rate (TPR) of at most 12%. For comparison, an attacker without access to the model can achieve a TPR of at most 10%.
+    </li>
+    <li><b><label style="color: orange">Orange</label> (Bayes security between [0.9, 0.98])</b>:
+      the model leaks a fair amount of information, which can be exploited in membership inference attacks.
+      An attacker aiming for FPR ≤ 10% can achieve up to 20% TPR.
+      It may be beneficial to consider techniques for empirical estimation of privacy (e.g. <a href="https://arxiv.org/abs/1902.01350">F-BLEAU</a>).
+    </li>
+    <li><b><label style="color: red">Red</label> (Bayes security < 0.9)</b>: the model is most likely not resilient against membership inference attacks.
+    It may be advisable to consider either adjusting the DP-SGD parameters. If membership inference is not a concern for a given scenario, an alternative is to consider resilience against <a href="#attribute-inference">attribute inference</a>.
+    </li>
+  </ul>
+</p>
+
+<p>
+  <em>Note: this interpretation is given as an example; users must determine the acceptable level of risk for their own scenarios.</em>
+</p>
+
+
+ <p>The above interactive tool is based on the following assumptions:
+    <ol>
+      <li><b>White-box attacker:</b> That the attacker can see the internal model updates during training.
+        In practice, however, this is not always the case. A more realistic attacker can only <em>query</em> the model, and observe the outputs.</li>
+      <li><b>Worst-case data:</b> That the dataset used for training contains the worst-case data: because some data records may leak more information than others, our analysis assumes that the dataset contains the ones that facilitate an attacker the most.
+      In practice, of course, the data used for training may not attain this worst-case.</li>
+    </ol>
+
+  This means that the analysis is conservative, and thus real-world deployments are likely to exhibit have higher resilience against membership inference attacks.
+  </p>
+
+<p>
+  The above analysis is based on an <em>approximate</em> expression for the Bayes security of DP-SGD, which we observed to work well (up to 0.015 absolute error on Bayes security) for the parameters ranged that the above tool allows.
+  For a more accurate analysis, you may want to use a moment accountant (e.g., <a href="https://github.com/microsoft/prv_accountant">PRV accountant</a> or <a href="https://github.com/DPBayes/PLD-Accountant">PLD accountant</a>).
+</p>
+
+  <div style="text-align: center; margin: 50px;"><span class="subsection">Bayes Security</span></div>
+
+  <p>Bayes security measures the advantage of an attacker performing an attack <em>with</em> access to the
+    trained model, versus an attacker who has no access to the model and relies only on their prior knowledge.
+    This is based on the concept of <em>advantage</em>, which is widely used both in cryptography and in privacy-preserving ML.
+  Bayes security can be converted to other commonly-used metrics:
+  </p>
+
+
+
+  <p><b>True positive rate at chosen false positive rate (TPR @ FPR).</b>
+    One way of interpreting Bayes security is by matching it to
+    the maximum achievable true positive rate that an attacker can achieve when aiming for a (low) false positive rate; this metric is called TPR @ FPR.
+    Intuitively, a good attack is one that <i>confidently</i> makes good predictions.
+    The following tool shows the maximum achievable TPR for various choices of FPR, for given values of Bayes security.
+  </p>
+
+
+
+  <div id="tprfprPlot" class="jxgbox" style="width: 400px; height: 300px; margin: 0 auto"></div>
+  <div style="margin: 0 auto;">
+    <p>
+      <input id="betatprfpr" type="range" min="0" max="1" step="0.01" value="1" /> Bayes security: <label id="text_betatprfpr"> 1</label>
+    </p>
+  </div>
+
+  <p><b>Attacker success rate.</b>
+    Another useful way to interpret a value of Bayes security is by matching it to the probability that an attack will succeed (attacker success rate).
+    Because Bayes security measures the relation between an attacker with and without access to the model, to compute the success rate we need to assume a prior; that is: what is the probability that an attacker will succeed in the attack <i>without</i> access to the model?
+  </p>
+
+  <p><input id="betaaccuracy" type="range" min="0" max="1" step="0.01" value="1" /> Bayes security: <label id="text_betaaccuracy"> 1</label>
+  </p>
+  <p><input id="pi_input" type="range" min="0.5" max="1" step="0.01" value="0.5" /> Prior probability: <output id="pi_value"></output></p>
+  <p>The attacker is at most <b><output id="vulnerability">50</output>%</b> likely to succeed in guessing whether a data record is a member or not, assuming that members have the above prior.</p>
+
+
+    <!-- Getting all the above interactive plots/numbers to work. -->
+    <script>
+      var N = 1000000;
+      var L = 128;
+      var sigma = 2.5;
+      var epoch = 30;
+      var betatprfpr = 1;
+      var betaaccuracy = 1;
+      var MAX_SAMPLE_RATE = 0.005; // Upper bound on L/N; this ensures at most 0.015 error in the Bayes security approximation.
+
+      bayesBoard = bayesSecurityPlot();
+      tprfprBoard = tprfprPlot();
+
+      // Update numbers next to the sliders.
+      var slider_N = document.getElementById("N");
+      var output_N = document.getElementById("text_N");
+      var slider_L = document.getElementById("L");
+      var output_L = document.getElementById("text_L");
+      var slider_sigma = document.getElementById("sigma");
+      var output_sigma = document.getElementById("text_sigma");
+      var slider_betatprfpr = document.getElementById("betatprfpr");
+      var output_betatprfpr = document.getElementById("text_betatprfpr");
+      var slider_betaaccuracy = document.getElementById("betaaccuracy");
+      var output_betaaccuracy = document.getElementById("text_betaaccuracy");
+      var pi_value = document.querySelector("#pi_value");
+      var pi_input = document.querySelector("#pi_input");
+      var vulnerability = document.querySelector("#vulnerability");
+
+      updateAll = function () {
+        bayesBoard.update();
+        tprfprBoard.update();
+        output_betatprfpr.innerHTML = betatprfpr;
+        output_betaaccuracy.innerHTML = betaaccuracy;
+        vulnerability.textContent = ((1 - (Math.min(pi_value.value, 1-pi_value.value) * betaaccuracy)) * 100).toFixed(2);
+      }
+
+      slider_N.oninput = function () {
+        // Update N slider.
+        N = this.value;
+        output_N.innerHTML = N;
+
+        // Update the max value of L's slider.
+        max_L = Math.floor(N * MAX_SAMPLE_RATE);
+        slider_L.max = Math.floor(Math.log2(max_L));
+        max_L = 2**slider_L.max; // Accounting for rounding.
+
+        // The above automatically ensures that L/N <= MAX_SAMPLE_RATE.
+        // We just need to update the text next to the slider.
+        output_L.innerHTML = 2**slider_L.value;
+
+        updateAll();
+      };
+
+      slider_L.oninput = function () {
+        L = 2**this.value;
+        output_L.innerHTML = L;
+        updateAll();
+      };
+
+      slider_sigma.oninput = function () {
+        sigma = this.value * 0.1;
+        output_sigma.innerHTML = sigma;
+        updateAll();
+      };
+
+      slider_betatprfpr.oninput = function () {
+        betatprfpr = this.value;
+        output_betatprfpr.innerHTML = betatprfpr;
+        updateAll();
+      };
+
+      slider_betaaccuracy.oninput = function () {
+        betaaccuracy = this.value;
+        output_betaaccuracy.innerHTML = betaaccuracy;
+        updateAll();
+      };
+
+      pi_value.textContent = pi_input.value
+      pi_input.addEventListener("input", (event) => {
+        pi_value.textContent = event.target.value
+        updateAll();
+      })
+    </script>
+
+
+
+  <div id="attribute-inference" style="text-align: center; margin: 50px;"><span class="subsection">Data-Dependent Quantification of Attribute Inference</span></div>
+
+    <p>The analysis above considers <i>membership inference</i>, in which the attacker is assumed to have access to a complete data record and uses the model to ascertain whether that record was included in the training dataset.
+    This is depicted graphically below:</p>
+
+  <center><img src="mia-animation.gif" alt="membership-inference" width="533" height="300"></center>
+
+    <p>It has been shown that resilience against membership inference implies an equivalent level of resilience against all other privacy attacks that target individual data records.
+    However, there may be scenarios in which membership inference is not a concern.
+    In these scenarios it may be possible to obtain stronger resilience bounds for other types of privacy attacks.</p>
+
+    <p>For example, in <em>attribute inference</em>, the attacker is assumed to have partial knowledge of a data record and uses the model to infer the remainder of the data record.
+    This is depicted graphically below:</p>
+
+  <center><img src="ai-animation.gif" alt="attribute-inference" width="533" height="300"></center>
+
+  <p>
+    We developed a tool that enables quantifying resilience against attribute inference. This analysis is
+    data-dependent, meaning that the results depend on both the DP-SGD training parameters as well as the specific dataset used for training.
+    If the dataset itself is inherently resilient against attribute inference, this will be reflected in the results.
+  </p>
+
+  <p>The tool is based on the <a href="https://github.com/pytorch/opacus"><code>Opacus</code></a> implementation of DP-SGD, and is available at: <a href="https://github.com/microsoft/dpsgd-calculator">https://github.com/microsoft/dpsgd-calculator</a>.
+  </p>
+
+  <div id="support" style="text-align: center; margin: 50px;"><span class="subsection">Support and Attribution</span></div>
+
+  <p>If you have a usage question, have found a bug, or have a suggestion for improvement, please file a <a href="https://github.com/microsoft/dpsgd-calculator/issues">Github issue</a>, or get in touch at gcherubin [at] microsoft.com.</p>
+
+  <p>This calculator is based on the closed-form expression of the Bayes security metric for DP-SGD. Please cite as:</p>
+
+  <pre>
+  @inproceedings{cherubin2024closed,
+       title={Closed-Form Bounds for DP-SGD against Record-level Inference},
+       author={Cherubin, Giovanni and Köpf, Boris and Paverd, Andrew and Tople, Shruti and Wutschitz, Lukas and Zanella-Béguelin, Santiago},
+       booktitle={33rd USENIX Security Symposium (USENIX Security 24)},
+       year={2024}
+ }
+ </pre>
+
+  </div>
+
+  <script>
+    // Slideshow
+    var slideIndex = 1;
+    showDivs(slideIndex);
+
+    function plusDivs(n) {
+      showDivs(slideIndex += n);
+    }
+
+    function currentDiv(n) {
+      showDivs(slideIndex = n);
+    }
+
+    function showDivs(n) {
+      var i;
+      var x = document.getElementsByClassName("mySlides");
+      var dots = document.getElementsByClassName("demodots");
+      if (n > x.length) { slideIndex = 1 }
+      if (n < 1) { slideIndex = x.length };
+      for (let i = 0; i < x.length; i++) {
+        x[i].style.display = "none";
+      }
+      for (let i = 0; i < dots.length; i++) {
+        dots[i].className = dots[i].className.replace(" w3-white", "");
+      }
+      x[slideIndex - 1].style.display = "block";
+      dots[slideIndex - 1].className += " w3-white";
+    }
+  </script>
+
+</body>
+
+</html>
