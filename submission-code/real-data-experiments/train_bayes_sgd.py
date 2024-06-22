@@ -25,7 +25,7 @@ from opacus import PrivacyEngine
 from tqdm import tqdm
 
 from utils import *
-from bayessgd import AIAnalysis, MIAAnalysis, UserMIAAnalysis
+from bayessgd import AIAnalysis, MIAAnalysis
 
 
 def train(args, model, device, train_loader, optimizer, privacy_engine, epoch, test_loader):
@@ -42,8 +42,6 @@ def train(args, model, device, train_loader, optimizer, privacy_engine, epoch, t
             privacy_engine.bayes_ai_analysis.step(model, data, target, optimizer, criterion, device)
         if args.bayes_ai_approximate:
             privacy_engine.bayes_ai_analysis_approximate.step(model, data, target, optimizer, criterion, device)
-        if args.bayes_user_mia:
-            privacy_engine.bayes_user_mia_analysis.step()
 
         optimizer.zero_grad()
         output = model(data)
@@ -68,8 +66,6 @@ def train(args, model, device, train_loader, optimizer, privacy_engine, epoch, t
                 log["Bayes-AI"] = privacy_engine.bayes_ai_analysis.beta.item()
             if args.bayes_ai_approximate:
                 log["Bayes-AI-approximate"] = privacy_engine.bayes_ai_analysis_approximate.beta.item()
-            if args.bayes_user_mia:
-                log["Bayes-user-MIA"] = privacy_engine.bayes_user_mia_analysis.beta.item()
             if args.moments_accountant:
                 log["epsilon"] = privacy_engine.accountant.get_epsilon(delta=args.delta)
                 log["delta"] = args.delta
@@ -209,12 +205,6 @@ def main():
         help="Enable the approximate Bayes-SGD AI analysis",
     )
     parser.add_argument(
-        "--bayes-user-mia",
-        type=int,
-        default=0,
-        help="Enable user-level MIA analysis for a user whose data has the specified size. E.g., `--bayes-user-mia 100`.",
-    )
-    parser.add_argument(
         "--moments-accountant",
         action="store_true",
         default=False,
@@ -290,13 +280,6 @@ def main():
             privacy_engine.bayes_mia_analysis = MIAAnalysis(
                 noise_multiplier=optimizer.noise_multiplier,
                 sample_rate=train_loader.sample_rate,
-            )
-
-        if args.bayes_user_mia > 0:
-            privacy_engine.bayes_user_mia_analysis = UserMIAAnalysis(
-                noise_multiplier=optimizer.noise_multiplier,
-                sample_rate=train_loader.sample_rate,
-                user_data_size=args.bayes_user_mia,
             )
 
         # NOTE: we keep approximate and "full" AI analysis separate for
