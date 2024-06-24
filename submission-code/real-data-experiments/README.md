@@ -51,7 +51,8 @@ To reproduce Figure 9:
 bash launch-adult-full.sh
 ```
 
-This script takes a long time to run (~25h on an A100), as it exactly computes the diamater of the set of per-sample gradients for all values of the sensitive attribute at each iteration.
+> [!NOTE]
+> This script takes a long time to run (~25h on an A100), as it exactly computes the diamater of the set of per-sample gradients for all values of the sensitive attribute at each iteration.
 
 This will create the log files `results/analysis/adult-full-{1..5}.jsonl`.
 
