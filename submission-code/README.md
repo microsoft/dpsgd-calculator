@@ -98,7 +98,7 @@ Please, see the `README.md` file in [`real-data-experiments`](/submission-code/r
 
 ## License
 
-See [LICENSE.txt](..\LICENSE.txt).
+See [LICENSE.txt](../LICENSE.txt).
 
 ## Citation
 
