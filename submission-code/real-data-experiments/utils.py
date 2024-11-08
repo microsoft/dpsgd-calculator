@@ -13,6 +13,7 @@ from opacus.validators import ModuleValidator
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split
 from torchvision import datasets, transforms
 from typing import Union, Type, TypeVar
+from torchvision.datasets.utils import download_and_extract_archive
 
 # Attribute target and range for Bayes-SGD AI analysis.
 MNIST_ATTRIBUTE_IDX = [0, 0, 0]
@@ -132,9 +133,8 @@ class Purchase100(Dataset):
         dataset_path_pickle = dataset_path + '.pickle'
 
         if not os.path.exists(dataset_path) and not os.path.exists(dataset_path_pickle):
-            raise ValueError("Purchase-100 dataset not found.\n"
-                             "You may download the dataset from https://www.comp.nus.edu.sg/~reza/files/datasets.html\n"
-                            f"and unzip it in the {dataset_dir}/purchase100 directory")
+            url="https://raw.githubusercontent.com/privacytrustlab/datasets/master/dataset_purchase.tgz"
+            download_and_extract_archive(url=url, download_root=os.path.join(dataset_dir, 'purchase100'))
 
         if not os.path.exists(dataset_path_pickle):
             print('Found the dataset. Saving it in a pickle file that takes less time to load...')

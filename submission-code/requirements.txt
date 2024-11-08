@@ -14,3 +14,6 @@ torch==1.13.1
 torchaudio==0.13.1
 torchvision==0.14.1
 tqdm==4.66.3
+fourier-accountant==0.12.11
+notebook==6.4.12
+datasets==2.20.0
