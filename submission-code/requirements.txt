@@ -10,7 +10,7 @@ shapely==2.0.1
 statsmodels==0.14.0
 tensorflow==2.12.1
 tensorflow-privacy==0.8.9
-torch==1.13.1
+torch==2.2.0
 torchaudio==0.13.1
 torchvision==0.14.1
 tqdm==4.66.3
